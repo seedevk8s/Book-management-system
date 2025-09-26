@@ -47,6 +47,23 @@ public class Book {
     @JoinColumn(name = "member_id")     // FK 컬럼명
     private Member registeredBy;     // 등록한 회원
 
+    /*
+    양방향은 다음 경우에만 고려:
+    Member 객체에서 자주 Book 목록에 접근해야 할 때
+    캐스케이드 작업이 필요할 때
+    비즈니스 로직상 Member가 Book을 관리해야 할 때
+
+    단방향만 사용해도 되는 이유:
+    1. 비즈니스 요구사항 충족
+    "이 책을 누가 등록했는가?" → book.getRegisteredBy() ✅
+    "이 회원이 등록한 모든 책은?" → Repository에서 쿼리로 해결 가능
+    2. 장점
+    ✅ 단순한 구조: 관리 포인트가 하나
+    ✅ 순환 참조 없음: JSON 직렬화 시 문제 없음
+    ✅ 성능 이슈 없음: 필요한 방향으로만 조회
+    ✅ 유지보수 용이: 양방향 동기화 걱정 없음
+     */
+
     // 등록 시간 자동 설정
     @Column(nullable = false, updatable = false)  // 수정 불가
     private LocalDateTime createdAt;
