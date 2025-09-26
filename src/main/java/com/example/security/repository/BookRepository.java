@@ -34,6 +34,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b ORDER BY b.createdAt DESC")
     List<Book> findAllOrderByCreatedAtDesc();
 
+    // JPQL 사용
+    @Query("SELECT b FROM Book b WHERE b.registeredBy.id = :memberId")
+    List<Book> findBooksByMemberId(@Param("memberId") Long memberId);
+
     // 특정 회원이 등록한 책 개수 조회
     @Query("SELECT COUNT(b) FROM Book b WHERE b.registeredBy.id = :memberId")
     Long countByMemberId(@Param("memberId") Long memberId);

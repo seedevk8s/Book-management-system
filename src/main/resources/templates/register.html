@@ -10,41 +10,114 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
+<!--
+============================================================================
+🎯 회원가입 처리 흐름:
+============================================================================
 
+1. 사용자가 폼 입력 후 "회원가입" 버튼 클릭
+
+2. POST /register 요청 발생
+   - form의 모든 input name 속성이 파라미터로 전송
+   - username, password, name, age, email
+
+3. MemberController.register(Member member) 메서드 실행
+   - Spring이 자동으로 파라미터를 Member 객체에 바인딩
+   - name 속성과 Member 필드명이 일치하면 자동 매핑
+
+4. MemberService.register() 호출
+   - BCryptPasswordEncoder로 패스워드 암호화
+   - USER 권한 자동 부여
+   - DB 저장
+
+5. 성공 시 /ui/list로 리다이렉트
+   - 메인 페이지(로그인 화면)로 이동
+
+============================================================================
+💡 개선 포인트:
+============================================================================
+
+1. 유효성 검증 추가 필요
+   - required 속성 추가
+   - pattern 속성으로 형식 검증
+   - JavaScript 유효성 검사
+
+2. CSRF 토큰 (Spring Security 자동 처리)
+   - Thymeleaf가 자동으로 CSRF 토큰 추가
+   - 보안상 중요한 기능
+
+3. 에러 처리
+   - 중복 username 체크
+   - 에러 메시지 표시 영역 추가
+
+4. type="type" → type="email" 수정 필요
+
+============================================================================
+-->
+<!-- Bootstrap container: 중앙 정렬된 반응형 컨테이너, mt-4는 margin-top 4단위 -->
 <div class="container mt-4">
     <h2> 회원인증 시스템</h2>
+
+    <!-- Bootstrap Card 컴포넌트: 콘텐츠를 카드 형태로 그룹화 -->
     <div class="card">
+        <!-- Card 헤더: 제목 영역 -->
         <div class="card-header">
             회원가입
         </div>
+
+        <!-- Card 본문: 실제 폼이 들어가는 영역 -->
         <div class="card-body">
-            <!--회원가입  폼 -->
+            <!-- 회원가입 폼 시작 -->
+            <!-- th:action="@{/register}": Thymeleaf가 컨텍스트 경로를 자동으로 추가 -->
+            <!-- method="post": POST 방식으로 데이터 전송 (보안상 안전) -->
             <form th:action="@{/register}" method="post">
+
+                <!-- Username 입력 필드 -->
                 <div class="form-group">
+                    <!-- label의 for 속성: 클릭 시 해당 input으로 포커스 이동 -->
                     <label for="username">Username:</label>
+                    <!-- name="username": 서버로 전송될 파라미터명 (Member 객체의 username 필드와 매핑) --><!-- id="username": label과 연결 및 JavaScript/CSS 선택자로 사용 -->
                     <input type="text" class="form-control" placeholder="Enter username" id="username" name="username">
                 </div>
+
+                <!-- Password 입력 필드 -->
                 <div class="form-group">
                     <label for="password">Password:</label>
+                    <!-- type="password": 입력 내용이 마스킹되어 보안 유지 --><!-- MemberService에서 BCrypt로 암호화되어 저장됨 -->
                     <input type="password" class="form-control" placeholder="Enter password" id="password" name="password">
                 </div>
+
+                <!-- 실명 입력 필드 -->
                 <div class="form-group">
                     <label for="name">Name:</label>
+                    <!-- Member 객체의 name 필드와 매핑 -->
                     <input type="text" class="form-control" placeholder="Enter name" id="name" name="name">
                 </div>
+
+                <!-- 나이 입력 필드 -->
                 <div class="form-group">
                     <label for="age">Age:</label>
+                    <!-- type="number": 숫자만 입력 가능, 스피너 버튼 제공 --><!-- Member 객체의 int age 필드와 자동 형변환되어 매핑 -->
                     <input type="number" class="form-control" placeholder="Enter age" id="age" name="age">
                 </div>
+
+                <!-- 이메일 입력 필드 -->
                 <div class="form-group">
                     <label for="email">Email:</label>
-                    <input type="type" class="form-control" placeholder="Enter email" id="email" name="email">
+                    <!-- 주의: type="type"는 오타, type="email"이 올바름 --><!-- type="email"로 수정하면 이메일 형식 자동 검증 -->
+                    <input type="email" class="form-control" placeholder="Enter email" id="email" name="email">
                 </div>
+
+                <!-- 제출 버튼: POST /register로 폼 데이터 전송 --><!-- MemberController의 @PostMapping("/register") 메서드 호출 -->
                 <button type="submit" class="btn btn-primary">회원가입</button>
+
+                <!-- 메인화면 링크: th:href로 경로 생성 --><!-- GET /ui/list로 이동 (MemberController의 main() 메서드) -->
                 <a th:href="@{/ui/list}" class="btn btn-primary">메인화면</a>
             </form>
 
         </div>
+
+        <!-- Card 푸터: 추가 정보나 설명 영역 -->
         <div class="card-footer">스프링 부트(Spring Security)</div>
     </div>
 </div>

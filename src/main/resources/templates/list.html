@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Thymeleaf 네임스페이스 선언: th:* 속성 사용 가능 -->
+<!-- Spring Security 네임스페이스: sec:* 속성으로 권한 체크 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
@@ -15,15 +17,26 @@
 <div class="container mt-4">
     <h2>📚 도서 관리 시스템</h2>
 
-    <!-- 알림 메시지 표시 -->
-    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+    <!-- ============ 알림 메시지 영역 (Flash Attributes) ============ -->
+    <!--
+        RedirectAttributes.addFlashAttribute()로 전달된 메시지 표시
+        일회성 메시지로 페이지 새로고침 시 자동으로 사라짐
+    -->
+
+    <!-- 성공 메시지: 책 등록/수정/삭제 성공 시 표시 -->
+    <div th:if="${successMessage}"
+         class="alert alert-success alert-dismissible fade show" role="alert">
+        <!-- th:text: XSS 공격 방지, HTML 태그를 문자로 처리 -->
         <span th:text="${successMessage}"></span>
+        <!-- Bootstrap의 dismiss 기능: X 버튼 클릭 시 알림 닫기 -->
         <button type="button" class="close" data-dismiss="alert">
-            <span>&times;</span>
+            <span>&times;</span>  <!-- HTML 엔티티: × 기호 -->
         </button>
     </div>
 
-    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <!-- 에러 메시지: 작업 실패 시 표시 -->
+    <div th:if="${errorMessage}"
+         class="alert alert-danger alert-dismissible fade show" role="alert">
         <span th:text="${errorMessage}"></span>
         <button type="button" class="close" data-dismiss="alert">
             <span>&times;</span>
@@ -31,52 +44,72 @@
     </div>
 
     <div class="card">
-        <!-- 로그인/로그아웃 헤더 -->
+        <!-- ============ 로그인/로그아웃 헤더 영역 ============ -->
+
+        <!-- 비로그인 상태: 로그인 폼 표시 -->
+        <!-- #authorization.expression('isAuthenticated()'): Spring Security 헬퍼
+             현재 사용자가 인증되었는지 확인, #authorization : Thymeleaf Spring Security 통합 모듈에서 제공하는 특별한 객체 -->
         <div th:if="${not #authorization.expression('isAuthenticated()')}"
              class="card-header d-flex justify-content-center align-items-center">
+
+            <!-- 로그인 폼: Spring Security의 /login 엔드포인트로 POST -->
             <form class="form-inline" th:action="@{/login}" method="post">
                 <label for="username">Username:</label>
+                <!-- name="username": Spring Security 기본 파라미터명 -->
                 <input type="text" class="form-control ml-2" placeholder="Enter username"
                        id="username" name="username">
                 <label for="password" class="ml-3">Password:</label>
+                <!-- name="password": Spring Security 기본 파라미터명 -->
                 <input type="password" class="form-control ml-2" placeholder="Enter password"
                        id="password" name="password">
                 <button type="submit" class="btn btn-primary btn-sm ml-3">로그인</button>
             </form>
             <div class="mx-2">
+                <!-- @{/register}: Thymeleaf URL 생성, 컨텍스트 경로 자동 추가 -->
                 <a th:href="@{/register}" class="btn btn-sm btn-secondary">회원가입</a>
             </div>
         </div>
 
+        <!-- 로그인 상태: 사용자 정보와 로그아웃 버튼 표시 -->
         <div th:if="${#authorization.expression('isAuthenticated()')}"
              class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
                 <p class="mb-0">
+                    <!-- #authentication.principal: 현재 로그인한 사용자 객체 (CustomerMember)
+                         .member.name: CustomerMember 안의 Member 객체의 name 필드 -->
                     👤 로그인: <strong th:text="${#authentication.principal.member.name}"></strong>
+
+                    <!-- 권한 배지 표시 (USER, ADMIN 등) -->
+                    <!-- #authentication.authorities: 사용자의 권한 목록 (GrantedAuthority) -->
                     <span class="badge badge-info ml-2"
                           th:each="role : ${#authentication.authorities}"
                           th:text="${role.authority.replace('ROLE_', '')}"></span>
+                    <!-- replace('ROLE_', ''): "ROLE_USER" → "USER"로 표시 -->
                 </p>
             </div>
             <div>
                 <a th:href="@{/book/mybooks}" class="btn btn-info btn-sm">내 책 목록</a>
                 <a th:href="@{/logout}" class="btn btn-danger btn-sm ml-2">로그아웃</a>
+
+                <!-- sec:authorize: Spring Security 태그
+                     ROLE_ADMIN 권한이 있는 경우에만 표시 -->
                 <a sec:authorize="hasAuthority('ROLE_ADMIN')"
                    th:href="@{/member/admin}" class="btn btn-warning btn-sm ml-2">관리자</a>
             </div>
         </div>
 
         <div class="card-body">
-            <!-- 책 검색 영역 -->
+            <!-- ============ 책 검색 영역 ============ -->
             <div class="mb-3">
                 <form class="form-inline" th:action="@{/book/search}" method="get">
+                    <!-- GET 요청: URL에 파라미터 추가 (?title=검색어) -->
                     <input type="text" class="form-control mr-2" name="title"
                            placeholder="책 제목으로 검색...">
                     <button type="submit" class="btn btn-outline-primary btn-sm">🔍 검색</button>
                 </form>
             </div>
 
-            <!-- 책 목록 테이블 -->
+            <!-- ============ 책 목록 테이블 ============ -->
             <table class="table table-hover">
                 <thead class="thead-light">
                 <tr>
@@ -91,43 +124,62 @@
                 </tr>
                 </thead>
                 <tbody>
-                <!-- 책 목록이 없을 때 -->
+                <!-- books가 null이거나 비어있을 때 표시 -->
+                <!-- Model에 추가된 books 속성 확인 -->
                 <tr th:if="${books == null or books.empty}">
                     <td colspan="8" class="text-center text-muted">
                         등록된 책이 없습니다. 첫 번째 책을 등록해보세요!
                     </td>
                 </tr>
 
-                <!-- 책 목록 표시 -->
+                <!-- 책 목록 반복 표시 -->
+                <!-- th:each="변수, 상태변수 : 컬렉션" -->
                 <tr th:each="book, iterStat : ${books}">
+                    <!-- iterStat.count: 1부터 시작하는 순번 (index는 0부터) -->
                     <td th:text="${iterStat.count}"></td>
                     <td>
+                        <!-- PathVariable 전달: {id}(id=${book.id}) 형식 -->
+                        <!-- /book/detail/1 형태의 URL 생성 -->
                         <a th:href="@{/book/detail/{id}(id=${book.id})}"
                            th:text="${book.title}"
                            class="text-decoration-none"></a>
                     </td>
                     <td th:text="${book.author}"></td>
                     <td>
+                        <!-- #numbers: Thymeleaf 숫자 유틸리티 객체
+                             formatInteger(숫자, 최소자릿수, 구분자스타일)
+                             10000 → 10,000 형태로 표시 -->
                         <span th:text="${#numbers.formatInteger(book.price, 1, 'COMMA')}"></span>원
                     </td>
+                    <!-- 문자열 연결: ${변수 + '문자열'} -->
                     <td th:text="${book.page + 'p'}"></td>
                     <td>
+                        <!-- ?. : null-safe 연산자 (NullPointerException 방지)
+                             ?: : Elvis 연산자 (null일 때 기본값) -->
                         <small th:text="${book.registeredBy?.name ?: '알 수 없음'}"></small>
                     </td>
                     <td>
+                        <!-- #temporals: Java 8 시간 API 유틸리티
+                             LocalDateTime을 원하는 형식으로 포맷 -->
                         <small th:text="${#temporals.format(book.createdAt, 'MM/dd')}"></small>
                     </td>
                     <td>
-                        <!-- 본인이 등록한 책이거나 관리자인 경우 수정/삭제 버튼 표시 -->
+                        <!-- ============ 권한 기반 버튼 표시 ============ -->
+                        <!-- 복잡한 조건: 로그인 AND (작성자 본인 OR 관리자) -->
                         <div class="btn-group btn-group-sm" role="group"
                              th:if="${#authorization.expression('isAuthenticated()') and
-                                        (book.registeredBy?.username == #authentication.name or
-                                         #authorization.expression('hasRole(''ADMIN'')'))}">
+                                     (book.registeredBy?.username == #authentication.name or
+                                      #authorization.expression('hasRole(''ADMIN'')'))}">
+                            <!-- #authentication.name: 현재 로그인한 사용자의 username -->
+
                             <a th:href="@{/book/edit/{id}(id=${book.id})}"
                                class="btn btn-outline-primary btn-sm">수정</a>
+
+                            <!-- 삭제는 POST 요청 (RESTful 원칙) -->
                             <form th:action="@{/book/delete/{id}(id=${book.id})}"
                                   method="post" style="display: inline;"
                                   onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                <!-- JavaScript confirm: 사용자 확인 다이얼로그 -->
                                 <button type="submit" class="btn btn-outline-danger btn-sm">삭제</button>
                             </form>
                         </div>
@@ -136,8 +188,9 @@
                 </tbody>
             </table>
 
-            <!-- 책 등록 버튼 (로그인한 사용자만) -->
+            <!-- ============ 책 등록 버튼 (로그인 사용자만) ============ -->
             <div class="text-right">
+                <!-- Spring Security 헬퍼로 인증 상태 확인 -->
                 <a th:if="${#authorization.expression('isAuthenticated()')}"
                    th:href="@{/book/register}" class="btn btn-primary">
                     📖 새 책 등록
@@ -153,3 +206,40 @@
 
 </body>
 </html>
+
+<!--
+====================================
+취준생을 위한 핵심 포인트 정리
+====================================
+
+1. Thymeleaf 문법
+   - th:if/th:unless : 조건부 렌더링
+   - th:each : 반복문
+   - th:text : 텍스트 출력 (XSS 방지)
+   - th:href="@{...}" : URL 생성
+   - ${...} : 변수 표현식
+   - #{...} : 메시지 표현식
+
+2. Spring Security 통합
+   - #authorization : 권한 확인 객체
+   - #authentication : 현재 사용자 정보
+   - sec:authorize : 권한별 표시 제어
+   - principal : 사용자 상세 정보
+
+3. null 안전 처리
+   - ?. : Optional chaining
+   - ?: : Elvis operator (기본값)
+   - th:if="${변수 != null}" : null 체크
+
+4. Bootstrap 클래스
+   - d-flex : display: flex
+   - justify-content-* : 가로 정렬
+   - align-items-* : 세로 정렬
+   - alert-dismissible : 닫기 가능한 알림
+
+5. 보안 고려사항
+   - th:text 사용 (XSS 방지)
+   - POST 메소드로 삭제 (CSRF 보호)
+   - 권한 체크 (본인 또는 관리자)
+   - confirm() 다이얼로그 (실수 방지)
+-->
